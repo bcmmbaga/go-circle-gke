@@ -49,7 +49,7 @@ jobs:
       - run:
           name: Deploy to kubernetes cluster
           command: |
-            kubectl apply -f ${HOME}/deploy.yml
+            kubectl apply -f deploy.yml
             kubectl rollout status deployment/${PROJECT_NAME}
 workflows:
   version: 2
