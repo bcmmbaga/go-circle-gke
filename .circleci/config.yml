@@ -8,7 +8,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "package.json"}}
+            - v1-dependencies-{{ checksum "package.json" }}
             - v1-dependencies-
       - run:
           name: Install dependencies
@@ -16,14 +16,52 @@ jobs:
       - save_cache:
           paths:
             - node_modules
-          key: v1-dependencies-{{ checksum "package.json"}}
+          key: v1-dependencies-{{ checksum "package.json" }}
       - run:
           name: Run tests
           command: npm test
       - store_test_results:
           path: test-results
+  deploy_to_gke:
+    docker:
+      - image: google/cloud-sdk
+    enviroment:
+      - PROJECT_NAME: "cd-pipeline-test"
+      - PROJECT_ID: "cd-pipeline-test "
+      - COMPUTE_ZONE: "us-central1-a"
+      - CLUSTER_NAME: "go-circle-gke"
+    steps:
+      - checkout
+      - run:
+          name: Setup Google Cloud SDK
+          command: |
+            echo ${GCP_SERVICE_KEY} | base64 --decode >> ${HOME}/gcloud-service-key.json
+            gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
+            gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${COMPUTE_ZONE} --project ${PROJECT_NAME}
+      - setup_remote_docker
+      - run:
+          name: Docker build and push to registry 
+          command: |
+            docker build \
+              --build-arg COMMIT_REF=${CIRCLE_SHA1} \
+              --build-arg BUILD_DATE=`date -u +”%Y-%m-%dT%H:%M:%S”` \
+              -t ${PROJECT_NAME} .
+            docker tag ${PROJECT_NAME} eu.gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${CIRCLE_SHA1}
+            gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io
+            docker push eu.gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${CIRCLE_SHA1}
+      - run:
+          name: Deploy to kubernetes cluster
+          command: |
+            kubectl apply -f ${HOME}/deploy.yml
+            kubectl rollout status deployment/${PROJECT_NAME}
 workflows:
   version: 2
   build_test:
     jobs:
       - build_and_test
+      - deploy_to_gke:
+          requires:
+            - build_and_test
+          filters:
+            branches:
+              only: master
