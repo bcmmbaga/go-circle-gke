@@ -1,2 +1,2 @@
 # go-circle-gke
-CI/CD using CircleCI and Google Kubernetes Engine
+Building a Continuous Integration and Delivery (CI/CD) pipeline using CircleCI and Google Kubernetes Engine (GKE)
