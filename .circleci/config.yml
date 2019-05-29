@@ -35,7 +35,7 @@ jobs:
       - run:
           name: Setup Google Cloud SDK
           command: |
-            echo ${GCP_SERVICE_KEY} | base64 --decode >> ${HOME}/gcloud-service-key.json
+            echo ${GCP_SERVICE_KEY} | base64 --di >> ${HOME}/gcloud-service-key.json
             gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
             gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${COMPUTE_ZONE} --project ${PROJECT_NAME}
       - setup_remote_docker
