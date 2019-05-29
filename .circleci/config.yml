@@ -20,7 +20,7 @@ jobs:
       - run:
           name: Run tests
           command: npm test
-      - store_test_result:
+      - store_test_results:
           path: test-results
 workflows:
   version: 2
