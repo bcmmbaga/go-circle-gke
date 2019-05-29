@@ -37,7 +37,8 @@ jobs:
           command: |
             echo ${GCP_SERVICE_KEY} > ${HOME}/gcloud-service-key.json
             gcloud auth activate-service-account --key-file=${HOME}/gcloud-service-key.json
-            gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${COMPUTE_ZONE} --project ${PROJECT_NAME}
+            gcloud container clusters get-credentials go-circle-gke --zone us-central1-a --project cd-pipeline-test
+
       - setup_remote_docker
       - run:
           name: Docker build and push to registry 
