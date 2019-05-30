@@ -22,7 +22,15 @@ jobs:
           command: npm test
       - store_test_results:
           path: test-results
-  deploy_to_gke:
+  deploy_to_stage:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - run:
+          name: Testing running shell
+          command: bash test.sh
+  deploy_to_prod:
     docker:
       - image: google/cloud-sdk
     steps:
@@ -55,10 +63,16 @@ jobs:
             kubectl rollout status deployment/${PROJECT_NAME}
 workflows:
   version: 2
-  build_test:
+  build_test_deploy:
     jobs:
       - build_and_test
-      - deploy_to_gke:
+      - deploy_to_stage:
+          requires:
+            - build_and_test
+          filters:
+            branches:
+              only: staging
+      - deploy_to_prod:
           requires:
             - build_and_test
           filters:
