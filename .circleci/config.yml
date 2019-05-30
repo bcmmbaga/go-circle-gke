@@ -22,7 +22,7 @@ jobs:
           command: npm test
       - store_test_results:
           path: test-results
-  deploy_to_gke:
+  deploy_to_prod:
     docker:
       - image: google/cloud-sdk
     steps:
@@ -43,6 +43,7 @@ jobs:
             docker build \
             --build-arg COMMIT_REF=${CIRCLE_SHA1} \
             --build-arg BUILD_DATE=`date -u +”%Y-%m-%dT%H:%M:%S”` \
+            --build-arg BUILD_BRANCH=${CIRCLE_BRANCH} \
             -t ${PROJECT_NAME} .
             docker tag ${PROJECT_NAME} eu.gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${CIRCLE_SHA1}
             gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io
@@ -50,17 +51,23 @@ jobs:
       - run:
           name: Deploy to kubernetes cluster
           command: |
-            envsubst < deploy.yml > deploy_prod.yml
-            kubectl apply -f deploy_prod.yml
-            kubectl rollout status deployment/${PROJECT_NAME}
+            if [[ $(echo "$CIRCLE_BRANCH" | grep -c "master") -gt 0 ]]; then
+              envsubst < prod_deploy.yml > deploy_prod.yml
+              kubectl apply -f deploy_prod.yml
+              kubectl rollout status deployment/${PROJECT_NAME}
+            else
+             envsubst < stage_deploy.yml > deploy_stage.yml
+             kubectl apply -f deploy_stage.yml
+             kubectl rollout status deployment/${PROJECT_NAME}
+            fi
 workflows:
   version: 2
-  build_test:
+  build_test_deploy:
     jobs:
       - build_and_test
-      - deploy_to_gke:
+      - deploy_to_prod:
           requires:
             - build_and_test
           filters:
             branches:
-              only: master
+              only: staging
