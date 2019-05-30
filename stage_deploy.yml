@@ -1,0 +1,36 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: stage-deploy
+spec:
+  selector:
+    app: stage-deploy
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stage-deploy
+  labels:
+    app: stage-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: state-deploy
+  template:
+    metadata:
+      labels:
+        app: stage-deploy
+    spec:
+      containers:
+      - name: stage-deploy
+        image: eu.gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${CIRCLE_SHA1}
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP

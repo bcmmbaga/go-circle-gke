@@ -22,14 +22,6 @@ jobs:
           command: npm test
       - store_test_results:
           path: test-results
-  deploy_to_stage:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - run:
-          name: Testing running shell
-          command: bash scripts/setup
   deploy_to_prod:
     docker:
       - image: google/cloud-sdk
@@ -58,23 +50,23 @@ jobs:
       - run:
           name: Deploy to kubernetes cluster
           command: |
-            envsubst < deploy.yml > deploy_prod.yml
-            kubectl apply -f deploy_prod.yml
-            kubectl rollout status deployment/${PROJECT_NAME}
+            if [[ $(echo "$CIRCLE_BRANCH" | grep -c "master") -gt 0 ]]; then
+              envsubst < prod_deploy.yml > deploy_prod.yml
+              kubectl apply -f deploy_prod.yml
+              kubectl rollout status deployment/${PROJECT_NAME}
+            else
+             envsubst < stage_deploy.yml > deploy_stage.yml
+             kubectl apply -f deploy_stage.yml
+             kubectl rollout status deployment/${PROJECT_NAME}
+            fi
 workflows:
   version: 2
   build_test_deploy:
     jobs:
       - build_and_test
-      - deploy_to_stage:
-          requires:
-            - build_and_test
-          filters:
-            branches:
-              only: staging
       - deploy_to_prod:
           requires:
             - build_and_test
           filters:
             branches:
-              only: master
+              only: staging
